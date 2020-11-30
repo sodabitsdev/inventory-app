@@ -9,6 +9,7 @@ import (
 // PriceBook is a structure for the table price_books
 type PriceBook struct {
 	gorm.Model
+	//ID                 uint32  `json:"id"`
 	Barcode            uint    `gorm:"primaryKey" json:"barcode"`
 	ProductDescription string  `json:"productDescription"`
 	Price              float32 `gorm:"type:numeric(15,2)" json:"price"`

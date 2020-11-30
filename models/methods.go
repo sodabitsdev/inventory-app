@@ -1,25 +1,163 @@
 package models
 
 import (
-	"gorm.io/gorm"
+	"database/sql"
+	"errors"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
-// GetAllPriceBooks do not use
-func GetAllPriceBooks(priceBook *[]PriceBook) (err error) {
-	if priceBook != nil {
-		println("priceBook is not nil")
-		return
+///////////////////////////////////////////////////////////////////////
+// Table price_books functions
+///////////////////////////////////////////////////////////////////////
+
+// FindAllPriceBookItems returns all records from PriceBook table
+// priceBook parameter is pass by reference so the return value are stored in it
+func FindAllPriceBookItems(db *sql.DB) ([]PriceBook, error) {
+	rows, err := db.Query("select barcode, product_description, price from price_books")
+	var priceBook []PriceBook
+
+	if err != nil {
+		log.Error("error is not nil ", err)
+		return nil, err
 	}
 
-	println("priceBook is nil")
+	for rows.Next() {
+		//pb := new(PriceBook)			// this didn't work
+		pb := PriceBook{} // but this worked
+		err := rows.Scan(&pb.Barcode, &pb.ProductDescription, &pb.Price)
+		if err != nil {
+			log.Error("scanning row got an error: ", err)
+		}
+
+		priceBook = append(priceBook, pb)
+
+	}
+
+	return priceBook, nil
+
+	/*
+		if priceBook != nil {
+			// an element of slice cannot be accessed like priceBook[0]
+			// so dereference it like below.
+			// found solution here: https://stackoverflow.com/questions/38468258/why-is-indexing-on-the-slice-pointer-not-allowed-in-golang
+			pb := (*priceBook)[0]
+			db.First(pb)
+		}
+	*/
+
+}
+
+// FindPriceBookItemByBarcode return a slice of records, ideally one record
+func FindPriceBookItemByBarcode(db *sql.DB, barcode uint) ([]PriceBook, error) {
+	//row := db.QueryRow("SELECT * FROM books WHERE isbn = $1", isbn)
+
+	var sql = "select barcode, product_description, price from price_books where barcode = $1"
+	row := db.QueryRow(sql, barcode)
+
+	var priceBook []PriceBook
+	pb := PriceBook{}
+	err := row.Scan(&pb.Barcode, &pb.ProductDescription, &pb.Price)
+	if err != nil {
+		log.Error("scanning row got an error: ", err)
+	}
+
+	priceBook = append(priceBook, pb)
+
+	return priceBook, nil
+}
+
+// InsertPriceBookItem inserts one record in PriceBook table.  If successful
+// return nil.  Not going to return rowsAffected since it is not supported by
+// all database drivers
+func InsertPriceBookItem(db *sql.DB, priceBook *PriceBook) error {
+	if priceBook.Barcode == 0 {
+		log.Error("barcode is not set to a real value ... returning error")
+		err := errors.New("barcode is not set to a real value")
+		return err
+	}
+
+	var sql = "insert into price_books (barcode, product_description, price) " +
+		"values($1, $2, $3)"
+	_, err := db.Exec(sql, priceBook.Barcode, priceBook.ProductDescription, priceBook.Price)
+
+	if err != nil {
+		log.Error("insert to price_books failed ", err)
+		return err
+	}
+
+	log.Info("insert to price_books passed")
 	return nil
 
 }
 
-// GetAllPrices returns a slice of PriceBook by reference or error
-func GetAllPrices(db *gorm.DB, priceBook *[]PriceBook) (err error) {
-	if err = db.Find(priceBook).Error; err != nil {
-		return err
+// UpdatePriceBookItem updates one or more items in PriceBook table
+// the primary key barcode must exist
+func UpdatePriceBookItem(db *sql.DB, priceBook *PriceBook) error {
+
+	var sql = `update price_books set product_description = $1, price = $2 
+		 where barcode = $3`
+
+	_, err := db.Exec(sql, priceBook.ProductDescription, priceBook.Price,
+		priceBook.Barcode)
+
+	if err != nil {
+		log.Error("Update to price_books failed ", err)
+		return nil
 	}
+
+	log.Debug("update to price_books passed")
+	return nil
+
+}
+
+///////////////////////////////////////////////////////////////////////
+// Table inventories functions
+///////////////////////////////////////////////////////////////////////
+
+// GetAllInventories returns all records from table inventories
+func GetAllInventories(db *sql.DB) ([]Inventory, error) {
+	var sql = `select * from inventories order by inventory_date`
+	log.Debug("SQL: ", sql)
+
+	return nil, nil
+}
+
+// GetAllInventoriesByDate returns all records from table inventories that match on the InventoryDate column
+func GetAllInventoriesByDate(db *sql.DB, inventoryDate *time.Time) ([]Inventory, error) {
+	var sql = `Select * from inventories where inventory_date = $1`
+	log.Debug("SQL: ", sql)
+
+	return nil, nil
+}
+
+// GetInventoryByBarcode returns all records from table inventories that match on the column barcode
+func GetInventoryByBarcode(db *sql.DB, barcode int) ([]Inventory, error) {
+	var sql = `Select * from inventories where barcode = $1`
+	log.Debug("SQL: ", sql)
+
+	return nil, nil
+}
+
+// InsertInventory inserts a record in table inventories
+func InsertInventory(db *sql.DB, inventory *Inventory) error {
+	var sql = `Insert into inventories (inventory_date, 
+										barcode, 
+										product_description, 
+										price, 
+										quantity)
+										values ($1, $2, $3, $4, $5)`
+	log.Debug("SQL: ", sql)
+
+	return nil
+}
+
+// UpdateInventory a record in table inventory where columns match on inventory_date and barcode
+func UpdateInventory(db *sql.DB, inventory *Inventory) error {
+
+	var sql = `Update inventories set product_description = $1, price = $2, 
+				quantity = $3`
+	log.Debug("SQL: ", sql)
 	return nil
 }
