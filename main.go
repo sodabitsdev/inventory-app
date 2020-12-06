@@ -16,119 +16,117 @@ import (
 	*/
 
 	// "github.com/sodabitsdev/inventory-app/config"
-	"github.com/sodabitsdev/inventory-app/models"
 
-	// "gorm.io/driver/sqlite"
-	// "gorm.io/gorm"
+	//"time"
+
+	//https://github.com/joho/godotenv
+	//"github.com/joho/godotenv"
+	//"log"
+	//"os"
 
 	"database/sql"
-	//"time"
-	_ "github.com/mattn/go-sqlite3"
+	"fmt"
+	"os"
 
+	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
+	"github.com/sodabitsdev/inventory-app/models"
+
+	//_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
 )
-
-// Global variable
-//var DB *gorm.DB
 
 // main function to start the server
 func main() {
 
-	log.Debug("Debug message")
-	log.Info("Info message")
+	// configure logger
+	configureLogger()
 
-	db, err := sql.Open("sqlite3", "./inventory.db")
-	checkErr(err)
+	// load environment variables
+	loadEnvVariables()
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbHost := os.Getenv("DB_HOST")
+	dbDatabase := os.Getenv("DB_DATABASE")
 
-	// insert
-	// stmt, err := db.Prepare("insert into price_books (barcode, product_description, price) values (?,?,?) ")
-	// checkErr(err)
+	var db *sqlx.DB
 
-	// res, err := stmt.Exec(123, "ice cream", 2.99)
-	// checkErr(err)
+	//db, err := sqlx.Open("sqlite3", "./inventory.db")
+	connectString := dbUser + ":" + dbPassword + "@(" + dbHost + ")/" + dbDatabase
+	log.Debugln("connectString ", connectString)
 
-	// id, err := res.LastInsertId()
-	// checkErr(err)
+	db, err := sqlx.Connect("mysql", connectString)
 
-	// fmt.Println(id)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Debugln("Established connection to database ... ", dbHost, dbDatabase)
+
+	// TESTING ....
 
 	// Query all
-	priceBook, err := models.FindAllPriceBookItems(db)
+	// var priceBook []models.PriceBook
+	// priceBook, err = models.FindAllPriceBookItems(db)
+	// fmt.Println("printing results from FindAllPriceBookItems...")
+	// if priceBook != nil {
+	// 	fmt.Println(priceBook)
+	// }
 
-	if err != nil {
-		log.Error("FindAllPriceBookItems returned err", err)
-	}
+	// priceBook, err = models.FindPriceBookItemByBarcode(db, "123")
 
-	log.Info("priceBook", priceBook)
-
-	// Query by barcode
-	priceBook1, err := models.FindPriceBookItemByBarcode(db, 123)
-	if err != nil {
-		log.Error("FindPriceBookItemByBarcode returned error", err)
-	}
-
-	log.Info("Query by barcode: ", priceBook1)
+	// if priceBook != nil {
+	// 	fmt.Println("printing results from FindPriceBookItemByBarcode...")
+	// 	fmt.Println(priceBook)
+	// }
 
 	// Insert
-	priceBookInsert := &models.PriceBook{Barcode: 456, ProductDescription: "test product 456", Price: 456}
+	priceBookInsert := &models.PriceBook{Barcode: "456",
+		ProductDescription: sql.NullString{String: "test product 789", Valid: true}, Price: sql.NullFloat64{Float64: 456}}
+
 	err = models.InsertPriceBookItem(db, priceBookInsert)
 	if err != nil {
-		log.Error("InsertPriceBookItem returned an error: ", err)
+		fmt.Println("InsertPriceBookItem returned an error: ", err)
 	}
 
-	// Update
-	priceBookUpdate := &models.PriceBook{Barcode: 456, ProductDescription: "test product 456 - updated", Price: 10}
-
-	err = models.UpdatePriceBookItem(db, priceBookUpdate)
-	if err != nil {
-		log.Error("UpdatePriceBookItem returned an error: ", err)
-	}
-
-	// dbConfig := config.BuildDBConfig()
-
-	// db, err := gorm.Open(sqlite.Open(dbConfig.DBName), &gorm.Config{})
+	/// TESTING end here ...
 
 	// if err != nil {
-	// 	fmt.Println("Error connecting to the database...will exit")
-	// 	panic(err)
+	// 	log.Error("FindAllPriceBookItems returned err", err)
 	// }
 
-	// //defer db.Close()    // this method no longer exists in GORM 2.0
+	// log.Info("priceBook", priceBook)
 
-	// fmt.Printf("Established connection to this DB...%s\n", dbConfig.DBName)
-	//println((db))
-
-	// Create tables
-	// db.AutoMigrate(&models.PriceBook{}, &models.Inventory{})
-
-	// // Create records
-	// db.Create(&models.PriceBook{Barcode: 123, ProductDescription: "New Product", Price: 1.23})
-	// fmt.Println("Created record in PriceBook table")
-
-	// db.Create(&models.Inventory{InventoryDate: time.Now(), Barcode: 123, ProductDescription: "Some product description", Price: 1.23, Quantity: 10})
-	// fmt.Println("Created record in Inventory table")
-
-	// var pb models.PriceBook
-	// db.First(&pb)
-	// fmt.Println(pb)
-
-	// var pbs []models.PriceBook
-	// db.Find(&pbs)
-	// fmt.Println(pbs)
-
-	//fmt.Println(result.RowsAffected)
-
-	// db, err := gorm.Open("sqlite3", "test.db")
+	// // Query by barcode
+	// priceBook1, err := models.FindPriceBookItemByBarcode(db, 123)
 	// if err != nil {
-	//     panic("failed to connect database")
+	// 	log.Error("FindPriceBookItemByBarcode returned error", err)
 	// }
-	// defer db.Close()
 
-	// var users []User
-	// db.Find(&users)
-	// fmt.Println("{}", users)
+	// log.Info("Query by barcode: ", priceBook1)
 
-	// json.NewEncoder(w).Encode(users)
+	// // Insert
+	// priceBookInsert := &models.PriceBook{Barcode: 456, ProductDescription: "test product 456", Price: 456}
+	// err = models.InsertPriceBookItem(db, priceBookInsert)
+	// if err != nil {
+	// 	log.Error("InsertPriceBookItem returned an error: ", err)
+	// }
+
+	// // Update
+	// priceBookUpdate := &models.PriceBook{Barcode: 456, ProductDescription: "test product 456 - updated", Price: 10}
+
+	// err = models.UpdatePriceBookItem(db, priceBookUpdate)
+	// if err != nil {
+	// 	log.Error("UpdatePriceBookItem returned an error: ", err)
+	// }
+
+	// Query Inventories
+	// inventories, err := models.FindAllInventories(db)
+	// if err != nil {
+	// 	log.Error("GetAllInventories returned error: ", err)
+	// }
+	// log.Info("inventories: ", inventories)
 
 }
 
@@ -136,4 +134,35 @@ func checkErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func loadEnvVariables() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Error("Error loading environment variables...", err)
+	}
+}
+
+func configureLogger() {
+
+	//example found here: https://stackoverflow.com/questions/48971780/change-format-of-log-output-logrus/48972299
+
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors:   false,
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+		ForceColors:     true,
+	})
+
+	// print calling method in the log
+	//log.SetReportCaller(true)
+
+	// Output to stdout instead of the default stderr
+	// Can be any io.Writer, see below for File example
+	log.SetOutput(os.Stdout)
+
+	// Only log the warning severity or above.
+	//log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.DebugLevel)
+
 }

@@ -1,26 +1,22 @@
 package models
 
 import (
+	"database/sql"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // PriceBook is a structure for the table price_books
 type PriceBook struct {
-	gorm.Model
-	//ID                 uint32  `json:"id"`
-	Barcode            uint    `gorm:"primaryKey" json:"barcode"`
-	ProductDescription string  `json:"productDescription"`
-	Price              float32 `gorm:"type:numeric(15,2)" json:"price"`
+	Barcode            string          `db:"barcode" json:"barcode"`
+	ProductDescription sql.NullString  `db:"product_description" json:"productDescription"`
+	Price              sql.NullFloat64 `db:"price" json:"price"`
 }
 
 // Inventory is a structure for the table inventories
 type Inventory struct {
-	gorm.Model
-	InventoryDate      time.Time `gorm:"type:date;primaryKey" json:"inventoryDate"`
-	Barcode            uint      `gorm:"primaryKey" json:"barcode"` /* Barcode may or may not exist */
-	ProductDescription string    `json:"productDescription"`
-	Price              float32   `sql:"type:decimal(10,2)" json:"price"`
-	Quantity           uint
+	InventoryDate      time.Time       `db:"inventory_date" json:"inventoryDate"`
+	Barcode            string          `db:"barcode" json:"barcode"`
+	ProductDescription sql.NullString  `db:"product_description" json:"productDescription"`
+	Price              sql.NullFloat64 `db:"price" json:"price"`
+	Quantity           sql.NullInt64   `db:"quantity" json:"quantity"`
 }
