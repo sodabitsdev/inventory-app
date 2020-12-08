@@ -191,7 +191,3 @@ func UpdateInventory(db *sqlx.DB, inventory *Inventory) (rowsUpdated int64, err 
 
 	return rowsUpdated, nil
 }
-
-func doNothing() {
-
-}
