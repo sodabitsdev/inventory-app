@@ -19,14 +19,10 @@ import (
 
 	//"time"
 
-	//https://github.com/joho/godotenv
-	//"github.com/joho/godotenv"
-	//"log"
-	//"os"
-
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -40,17 +36,20 @@ import (
 // main function to start the server
 func main() {
 
+	// Database handle
+	var db *sqlx.DB
+
 	// configure logger
 	configureLogger()
 
 	// load environment variables
 	loadEnvVariables()
+	env := os.Getenv("ENVIRONMENT")
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbHost := os.Getenv("DB_HOST")
 	dbDatabase := os.Getenv("DB_DATABASE")
-
-	var db *sqlx.DB
+	log.Infoln("Loaded environment variables for.....", env)
 
 	//db, err := sqlx.Open("sqlite3", "./inventory.db")
 	connectString := dbUser + ":" + dbPassword + "@(" + dbHost + ")/" + dbDatabase
@@ -62,17 +61,17 @@ func main() {
 		panic(err)
 	}
 
-	log.Debugln("Established connection to database ... ", dbHost, dbDatabase)
+	log.Infoln("Established connection to database ... ", dbHost, dbDatabase)
 
 	// TESTING ....
 
 	// Query all
-	// var priceBook []models.PriceBook
-	// priceBook, err = models.FindAllPriceBookItems(db)
-	// fmt.Println("printing results from FindAllPriceBookItems...")
-	// if priceBook != nil {
-	// 	fmt.Println(priceBook)
-	// }
+	var priceBook []models.PriceBook
+	priceBook, err = models.FindAllPriceBookItems(db)
+	fmt.Println("printing results from FindAllPriceBookItems...")
+	if priceBook != nil {
+		fmt.Println(priceBook)
+	}
 
 	// priceBook, err = models.FindPriceBookItemByBarcode(db, "123")
 
@@ -82,13 +81,59 @@ func main() {
 	// }
 
 	// Insert
-	priceBookInsert := &models.PriceBook{Barcode: "456",
-		ProductDescription: sql.NullString{String: "test product 789", Valid: true}, Price: sql.NullFloat64{Float64: 456}}
+	priceBookInsert := &models.PriceBook{
+		Barcode:            "456",
+		ProductDescription: sql.NullString{String: "test product 789", Valid: true},
+		Price:              sql.NullFloat64{Float64: 456},
+	}
 
 	err = models.InsertPriceBookItem(db, priceBookInsert)
 	if err != nil {
 		fmt.Println("InsertPriceBookItem returned an error: ", err)
 	}
+
+	const (
+		layoutISO = "2006-01-02"
+		layoutUS  = "January 2, 2006"
+	)
+
+	// Insert into Inventory table
+	invDate, errdate := time.Parse(layoutISO, "2020-12-07")
+	if errdate != nil {
+		log.Error("date error : ", errdate)
+	} else {
+		log.Infoln("invDate: ", invDate)
+	}
+
+	inventoryInsert := &models.Inventory{
+		InventoryDate:      invDate,
+		Barcode:            "123",
+		ProductDescription: sql.NullString{String: "testing", Valid: true},
+		Price:              sql.NullFloat64{Float64: 100.00},
+		Quantity:           10,
+	}
+
+	insertID, err := models.InsertInventory(db, inventoryInsert)
+	if err != nil {
+		log.Errorln("Error inserting inventory record: ", err)
+	}
+
+	log.Debugln("InsertInventory insertId ...", insertID)
+
+	updateInventory := &models.Inventory{
+		InventoryDate:      invDate,
+		Barcode:            "123",
+		ProductDescription: sql.NullString{String: "testing - UPDATED", Valid: true},
+		Price:              sql.NullFloat64{Float64: 101.00},
+		Quantity:           11,
+	}
+
+	updatedRows, err := models.UpdateInventory(db, updateInventory)
+	if err != nil {
+		log.Errorln("Error updateding inventory record: ", err)
+	}
+
+	log.Debugln("Updated Inventory record.  Records affected: ", updatedRows)
 
 	/// TESTING end here ...
 
@@ -141,6 +186,7 @@ func loadEnvVariables() {
 	if err != nil {
 		log.Error("Error loading environment variables...", err)
 	}
+
 }
 
 func configureLogger() {

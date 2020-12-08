@@ -17,6 +17,7 @@ import (
 // FindAllPriceBookItems returns all records from PriceBook table
 // priceBook parameter is pass by reference so the return value are stored in it
 func FindAllPriceBookItems(db *sqlx.DB) ([]PriceBook, error) {
+
 	priceBook := []PriceBook{}
 	err := db.Select(&priceBook, "select barcode, product_description, price from price_books")
 
@@ -26,30 +27,6 @@ func FindAllPriceBookItems(db *sqlx.DB) ([]PriceBook, error) {
 	}
 
 	return priceBook, nil
-
-	/*
-		rows, err := db.Query("select barcode, product_description, price from price_books")
-		var priceBook []PriceBook
-
-		if err != nil {
-			log.Error("error is not nil ", err)
-			return nil, err
-		}
-
-		for rows.Next() {
-			//pb := new(PriceBook)			// this didn't work
-			pb := PriceBook{} // but this worked
-			err := rows.Scan(&pb.Barcode, &pb.ProductDescription, &pb.Price)
-			if err != nil {
-				log.Error("scanning row got an error: ", err)
-			}
-
-			priceBook = append(priceBook, pb)
-
-		}
-
-		return priceBook, nil
-	*/
 
 	/*
 		if priceBook != nil {
@@ -76,28 +53,13 @@ func FindPriceBookItemByBarcode(db *sqlx.DB, barcode string) ([]PriceBook, error
 
 	return pb, nil
 
-	/*
-		var sql = "select barcode, product_description, price from price_books where barcode = $1"
-		row := db.QueryRow(sql, barcode)
-
-		var priceBook []PriceBook
-		pb := PriceBook{}
-		err := row.Scan(&pb.Barcode, &pb.ProductDescription, &pb.Price)
-		if err != nil {
-			log.Error("scanning row got an error: ", err)
-		}
-
-		priceBook = append(priceBook, pb)
-
-		return priceBook, nil
-
-	*/
 }
 
 // InsertPriceBookItem inserts one record in PriceBook table.  If successful
 // return nil.  Not going to return rowsAffected since it is not supported by
 // all database drivers
 func InsertPriceBookItem(db *sqlx.DB, priceBook *PriceBook) error {
+
 	log.Debugln("InsertPriceBookItem... from methods file")
 	if len(priceBook.Barcode) == 0 {
 		log.Error("barcode is not set to a value ... returning error")
@@ -111,18 +73,6 @@ func InsertPriceBookItem(db *sqlx.DB, priceBook *PriceBook) error {
 	db.MustExec(sql, priceBook.Barcode, priceBook.ProductDescription, priceBook.Price)
 
 	return nil
-
-	/*
-		_, err := db.Exec(sql, priceBook.Barcode, priceBook.ProductDescription, priceBook.Price)
-
-		if err != nil {
-			log.Error("insert to price_books failed ", err)
-			return err
-		}
-
-		log.Info("insert to price_books passed")
-		return nil
-	*/
 
 }
 
@@ -151,72 +101,97 @@ func UpdatePriceBookItem(db *sql.DB, priceBook *PriceBook) error {
 ///////////////////////////////////////////////////////////////////////
 
 // FindAllInventories returns all records from table inventories
-func FindAllInventories(db *sql.DB) ([]Inventory, error) {
+func FindAllInventories(db *sqlx.DB) ([]Inventory, error) {
+
 	var sql = `select inventory_date, barcode, product_description, price, quantity from inventories order by inventory_date`
 	logrus.Debug("SQL: ", sql)
 
-	rows, err := db.Query(sql)
+	inventory := []Inventory{}
+	err := db.Select(&inventory, sql)
+
 	if err != nil {
 		log.Error("Error from FindAllInventories: ", err)
 		return nil, err
-	}
-
-	var inventory []Inventory
-
-	for rows.Next() {
-		inv := Inventory{}
-		err := rows.Scan(&inv.InventoryDate, &inv.Barcode, &inv.ProductDescription, &inv.Price, &inv.Quantity)
-		if err != nil {
-			log.Error("scanning frow got an error: ", err)
-		}
-		inventory = append(inventory, inv)
 	}
 
 	return inventory, nil
 }
 
 // FindAllInventoriesByDate returns all records from table inventories that match on the InventoryDate column
-func FindAllInventoriesByDate(db *sql.DB, inventoryDate *time.Time) ([]Inventory, error) {
-	// var sql = `Select * from inventories where inventory_date = $1`
-	// log.Debug("SQL: ", sql)
+func FindAllInventoriesByDate(db *sqlx.DB, inventoryDate *time.Time) ([]Inventory, error) {
 
-	// rows := db.QueryRow(sql, inventoryDate)
+	var sql = `Select * from inventories where inventory_date = ?`
+	log.Debugln("SQL: ", sql)
 
-	// var inventory []Inventory
-	// inv := Inventory{}
-	// err := row.Scan()
+	inventory := []Inventory{}
 
-	return nil, nil
+	err := db.Select(&inventory, sql, inventoryDate)
+	if err != nil {
+		return nil, err
+	}
+
+	return inventory, nil
 }
 
 // GetInventoryByBarcode returns all records from table inventories that match on the column barcode
-func GetInventoryByBarcode(db *sql.DB, barcode string) ([]Inventory, error) {
-	var sql = `Select * from inventories where barcode = $1`
-	log.Debug("SQL: ", sql)
+func GetInventoryByBarcode(db *sqlx.DB, barcode string) ([]Inventory, error) {
 
-	return nil, nil
+	var sql = `Select * from inventories where barcode = ?`
+	log.Debugln("SQL: ", sql)
+
+	inventory := []Inventory{}
+
+	err := db.Select(&inventory, sql, barcode)
+	if err != nil {
+		return nil, err
+	}
+
+	return inventory, nil
 }
 
 // InsertInventory inserts a record in table inventories
-func InsertInventory(db *sql.DB, inventory *Inventory) error {
-	log.Debug("InsertInventory method called")
+// return the Id of the last inserted row
+func InsertInventory(db *sqlx.DB, inventory *Inventory) (int64, error) {
 
 	var sql = `Insert into inventories (inventory_date, 
 										barcode, 
 										product_description, 
 										price, 
 										quantity)
-										values ($1, $2, $3, $4, $5)`
-	log.Debug("SQL: ", sql)
+										values (?, ?, ?, ?, ?)`
+	log.Debugln("SQL: ", sql)
 
-	return nil
+	rs := db.MustExec(sql, inventory.InventoryDate, inventory.Barcode, inventory.ProductDescription, inventory.Price, inventory.Quantity)
+
+	insertID, err := rs.LastInsertId()
+
+	if err != nil {
+		return 0, err
+	}
+
+	return insertID, nil
 }
 
-// UpdateInventory a record in table inventory where columns match on inventory_date and barcode
-func UpdateInventory(db *sql.DB, inventory *Inventory) error {
+// UpdateInventory a record in table inventory where columns match on
+// inventory_date and barcode.  Returns either the total number of rows updated
+// or an error
+func UpdateInventory(db *sqlx.DB, inventory *Inventory) (rowsUpdated int64, err error) {
 
-	var sql = `Update inventories set product_description = $1, price = $2, 
-				quantity = $3`
+	var sql = `Update inventories set product_description = ?, price = ?, 
+				quantity = ?`
 	log.Debug("SQL: ", sql)
-	return nil
+
+	rs := db.MustExec(sql, inventory.ProductDescription, inventory.Price, inventory.Quantity)
+
+	rowsUpdated, err = rs.RowsAffected()
+
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsUpdated, nil
+}
+
+func doNothing() {
+
 }
