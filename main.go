@@ -36,6 +36,9 @@ func main() {
 	// configure database
 	utilities.ConfigureDB()
 
+	// defer Database close
+	defer utilities.DB().Close()
+
 	// env := os.Getenv("ENVIRONMENT")
 	// dbUser := os.Getenv("DB_USER")
 	// dbPassword := os.Getenv("DB_PASSWORD")

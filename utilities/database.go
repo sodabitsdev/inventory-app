@@ -35,10 +35,6 @@ func ConfigureDB() {
 		dbDatabase + "?charset=utf8&parseTime=True&loc=Local"
 	log.Debugln("connectString ", connectString)
 
-	//db, err = gorm.Open("mysql", "sohail:Mulesoft1@tcp(127.0.0.1:3306)/Football?charset=utf8&parseTime=True&loc=Local")
-
-	//?charset=utf8&parseTime=True&loc=Local
-
 	db, err := sqlx.Connect("mysql", connectString)
 
 	Database = db
@@ -46,8 +42,6 @@ func ConfigureDB() {
 	if err != nil {
 		log.Panicln("Error establishing connection to database: ", err)
 	}
-
-	//defer database.Close()
 
 	log.Infoln("Established connection to database ... ", dbHost, dbDatabase, db)
 
