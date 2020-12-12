@@ -19,196 +19,73 @@ import (
 
 	//"time"
 
-	"database/sql"
-	"fmt"
-	"os"
-	"time"
-
-	"github.com/jmoiron/sqlx"
-	"github.com/joho/godotenv"
-	"github.com/sodabitsdev/inventory-app/models"
+	//"github.com/joho/godotenv"
+	"github.com/sodabitsdev/inventory-app/routes"
+	"github.com/sodabitsdev/inventory-app/utilities"
 
 	//_ "github.com/mattn/go-sqlite3"
 	_ "github.com/go-sql-driver/mysql"
-	log "github.com/sirupsen/logrus"
 )
 
 // main function to start the server
 func main() {
 
-	// Database handle
-	var db *sqlx.DB
-
 	// configure logger
-	configureLogger()
+	utilities.ConfigureLogger()
 
-	// load environment variables
-	loadEnvVariables()
-	env := os.Getenv("ENVIRONMENT")
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbHost := os.Getenv("DB_HOST")
-	dbDatabase := os.Getenv("DB_DATABASE")
-	log.Infoln("Loaded environment variables for.....", env)
+	// configure database
+	utilities.ConfigureDB()
 
-	//db, err := sqlx.Open("sqlite3", "./inventory.db")
-	connectString := dbUser + ":" + dbPassword + "@(" + dbHost + ")/" + dbDatabase
-	log.Debugln("connectString ", connectString)
+	// env := os.Getenv("ENVIRONMENT")
+	// dbUser := os.Getenv("DB_USER")
+	// dbPassword := os.Getenv("DB_PASSWORD")
+	// dbHost := os.Getenv("DB_HOST")
+	// dbDatabase := os.Getenv("DB_DATABASE")
+	// log.Infoln("Loaded environment variables for.....", env)
 
-	db, err := sqlx.Connect("mysql", connectString)
+	// //db, err := sqlx.Open("sqlite3", "./inventory.db")
+	// connectString := dbUser + ":" + dbPassword + "@(" + dbHost + ")/" + dbDatabase
+	// log.Debugln("connectString ", connectString)
 
-	if err != nil {
-		panic(err)
-	}
-
-	log.Infoln("Established connection to database ... ", dbHost, dbDatabase)
-
-	// TESTING ....
-
-	// Query all
-	var priceBook []models.PriceBook
-	priceBook, err = models.FindAllPriceBookItems(db)
-	fmt.Println("printing results from FindAllPriceBookItems...")
-	if priceBook != nil {
-		fmt.Println(priceBook)
-	}
-
-	// priceBook, err = models.FindPriceBookItemByBarcode(db, "123")
-
-	// if priceBook != nil {
-	// 	fmt.Println("printing results from FindPriceBookItemByBarcode...")
-	// 	fmt.Println(priceBook)
-	// }
-
-	// Insert
-	priceBookInsert := &models.PriceBook{
-		Barcode:            "456",
-		ProductDescription: sql.NullString{String: "test product 789", Valid: true},
-		Price:              sql.NullFloat64{Float64: 456},
-	}
-
-	err = models.InsertPriceBookItem(db, priceBookInsert)
-	if err != nil {
-		fmt.Println("InsertPriceBookItem returned an error: ", err)
-	}
-
-	const (
-		layoutISO = "2006-01-02"
-		layoutUS  = "January 2, 2006"
-	)
-
-	// Insert into Inventory table
-	invDate, errdate := time.Parse(layoutISO, "2020-12-07")
-	if errdate != nil {
-		log.Error("date error : ", errdate)
-	} else {
-		log.Infoln("invDate: ", invDate)
-	}
-
-	inventoryInsert := &models.Inventory{
-		InventoryDate:      invDate,
-		Barcode:            "123",
-		ProductDescription: sql.NullString{String: "testing", Valid: true},
-		Price:              sql.NullFloat64{Float64: 100.00},
-		Quantity:           10,
-	}
-
-	insertID, err := models.InsertInventory(db, inventoryInsert)
-	if err != nil {
-		log.Errorln("Error inserting inventory record: ", err)
-	}
-
-	log.Debugln("InsertInventory insertId ...", insertID)
-
-	updateInventory := &models.Inventory{
-		InventoryDate:      invDate,
-		Barcode:            "123",
-		ProductDescription: sql.NullString{String: "testing - UPDATED", Valid: true},
-		Price:              sql.NullFloat64{Float64: 101.00},
-		Quantity:           11,
-	}
-
-	updatedRows, err := models.UpdateInventory(db, updateInventory)
-	if err != nil {
-		log.Errorln("Error updateding inventory record: ", err)
-	}
-
-	log.Debugln("Updated Inventory record.  Records affected: ", updatedRows)
-
-	/// TESTING end here ...
+	// db, err := sqlx.Connect("mysql", connectString)
 
 	// if err != nil {
-	// 	log.Error("FindAllPriceBookItems returned err", err)
+	// 	log.Panicln("Error establishing connection to database: ", err)
 	// }
 
-	// log.Info("priceBook", priceBook)
+	// defer DB.Close()
 
-	// // Query by barcode
-	// priceBook1, err := models.FindPriceBookItemByBarcode(db, 123)
-	// if err != nil {
-	// 	log.Error("FindPriceBookItemByBarcode returned error", err)
-	// }
+	// log.Infoln("Established connection to database ... ", dbHost, dbDatabase, db)
 
-	// log.Info("Query by barcode: ", priceBook1)
+	// configure HTTP
+	router := routes.SetupRouter()
 
-	// // Insert
-	// priceBookInsert := &models.PriceBook{Barcode: 456, ProductDescription: "test product 456", Price: 456}
-	// err = models.InsertPriceBookItem(db, priceBookInsert)
-	// if err != nil {
-	// 	log.Error("InsertPriceBookItem returned an error: ", err)
-	// }
-
-	// // Update
-	// priceBookUpdate := &models.PriceBook{Barcode: 456, ProductDescription: "test product 456 - updated", Price: 10}
-
-	// err = models.UpdatePriceBookItem(db, priceBookUpdate)
-	// if err != nil {
-	// 	log.Error("UpdatePriceBookItem returned an error: ", err)
-	// }
-
-	// Query Inventories
-	// inventories, err := models.FindAllInventories(db)
-	// if err != nil {
-	// 	log.Error("GetAllInventories returned error: ", err)
-	// }
-	// log.Info("inventories: ", inventories)
+	// run HTTP
+	router.Run()
 
 }
 
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
+// // configureLogger configures app wide logger
+// func configureLogger() {
 
-func loadEnvVariables() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Error("Error loading environment variables...", err)
-	}
+// 	//example found here: https://stackoverflow.com/questions/48971780/change-format-of-log-output-logrus/48972299
 
-}
+// 	log.SetFormatter(&log.TextFormatter{
+// 		DisableColors:   false,
+// 		FullTimestamp:   true,
+// 		TimestampFormat: "2006-01-02 15:04:05",
+// 		ForceColors:     true,
+// 	})
 
-func configureLogger() {
+// 	// print calling method in the log
+// 	//log.SetReportCaller(true)
 
-	//example found here: https://stackoverflow.com/questions/48971780/change-format-of-log-output-logrus/48972299
+// 	// Output to stdout instead of the default stderr
+// 	// Can be any io.Writer, see below for File example
+// 	log.SetOutput(os.Stdout)
 
-	log.SetFormatter(&log.TextFormatter{
-		DisableColors:   false,
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-		ForceColors:     true,
-	})
+// 	// Only log the warning severity or above.
+// 	//log.SetLevel(log.WarnLevel)
+// 	log.SetLevel(log.DebugLevel)
 
-	// print calling method in the log
-	//log.SetReportCaller(true)
-
-	// Output to stdout instead of the default stderr
-	// Can be any io.Writer, see below for File example
-	log.SetOutput(os.Stdout)
-
-	// Only log the warning severity or above.
-	//log.SetLevel(log.WarnLevel)
-	log.SetLevel(log.DebugLevel)
-
-}
+// }
